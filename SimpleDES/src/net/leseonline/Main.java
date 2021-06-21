@@ -29,6 +29,9 @@ public class Main {
 		{BigInteger.valueOf(5), BigInteger.valueOf(3),BigInteger.valueOf(0), BigInteger.valueOf(7),BigInteger.valueOf(6), BigInteger.valueOf(2),BigInteger.valueOf(1), BigInteger.valueOf(4)}
 	};
 	
+	/**
+	 * This object maps a six-bit value into an eight-bit value.
+	 */
 	private Hashtable<Integer, Integer[]> expansionMap;
 	
 	public static void main(String[] args) {
@@ -36,6 +39,13 @@ public class Main {
 	}
 	
 	private void init() {
+		// This object maps a six-bit value into an eight-bit value.
+		// Bit 5 -> Bit 7
+		// Bit 4 -> Bit 6
+		// Bit 3 -> Bits 4 and 2
+		// Bit 2 -> Bits 5 and 3
+		// Bit 1 -> Bit 1
+		// Bit 0 -> Bit 0
 		expansionMap = new Hashtable<Integer, Integer[]>();
 		expansionMap.put(32, new Integer[] {128});
 		expansionMap.put(16, new Integer[] {64});
