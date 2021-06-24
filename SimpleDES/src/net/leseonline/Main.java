@@ -19,15 +19,19 @@ public class Main {
 	// 1 1100 0111
 	private BigInteger key = BigInteger.valueOf(0x1c7);
 	
+	// S-reduction arrays are 2 rows x 8 columns.
 	private BigInteger[][] s1 = new BigInteger[][] {
-		{BigInteger.valueOf(5), BigInteger.valueOf(2),BigInteger.valueOf(1), BigInteger.valueOf(6),BigInteger.valueOf(3), BigInteger.valueOf(4),BigInteger.valueOf(7), BigInteger.valueOf(0)},
-		{BigInteger.valueOf(1), BigInteger.valueOf(4),BigInteger.valueOf(6), BigInteger.valueOf(2),BigInteger.valueOf(0), BigInteger.valueOf(7),BigInteger.valueOf(5), BigInteger.valueOf(3)}
+		{BigInteger.valueOf(5), BigInteger.valueOf(2), BigInteger.valueOf(1), BigInteger.valueOf(6), BigInteger.valueOf(3), BigInteger.valueOf(4), BigInteger.valueOf(7), BigInteger.valueOf(0)},
+		{BigInteger.valueOf(1), BigInteger.valueOf(4), BigInteger.valueOf(6), BigInteger.valueOf(2), BigInteger.valueOf(0), BigInteger.valueOf(7), BigInteger.valueOf(5), BigInteger.valueOf(3)}
 	};
 	
 	private BigInteger[][] s2 = new BigInteger[][] {
-		{BigInteger.valueOf(4), BigInteger.valueOf(0),BigInteger.valueOf(6), BigInteger.valueOf(5),BigInteger.valueOf(7), BigInteger.valueOf(1),BigInteger.valueOf(3), BigInteger.valueOf(2)},
-		{BigInteger.valueOf(5), BigInteger.valueOf(3),BigInteger.valueOf(0), BigInteger.valueOf(7),BigInteger.valueOf(6), BigInteger.valueOf(2),BigInteger.valueOf(1), BigInteger.valueOf(4)}
+		{BigInteger.valueOf(4), BigInteger.valueOf(0), BigInteger.valueOf(6), BigInteger.valueOf(5), BigInteger.valueOf(7), BigInteger.valueOf(1), BigInteger.valueOf(3), BigInteger.valueOf(2)},
+		{BigInteger.valueOf(5), BigInteger.valueOf(3), BigInteger.valueOf(0), BigInteger.valueOf(7), BigInteger.valueOf(6), BigInteger.valueOf(2), BigInteger.valueOf(1), BigInteger.valueOf(4)}
 	};
+	
+	private final int blockLen = 12;
+	private final int keyLen = 9;
 	
 	/**
 	 * This object maps a six-bit value into an eight-bit value.
@@ -67,8 +71,20 @@ public class Main {
 		System.out.println("Original paintext: " + toBinaryString(input, 12));
 	}
 
+	/**
+	 * This method is the rounds process for both encryption and decryption.
+	 * if the start round value is less than the final round, this would be the
+	 * encryption process.  If the start round is greater than the final round,
+	 * this would be the decryption process.  Start round must not equal final round.
+	 * @param value the plaintext or encrypted value to operate on.
+	 * @param startRound the starting round. 
+	 * @param finalRound the final round.
+	 * @return
+	 */
 	private BigInteger fprocess(BigInteger value, int startRound, int finalRound) {
-		BigInteger[] parts = value.divideAndRemainder(BigInteger.valueOf(64));
+		final int partLen = blockLen / 2;
+		
+		BigInteger[] parts = value.divideAndRemainder(BigInteger.TWO.pow(partLen));
 
 		// L(i-1) and R(i-1)
 		BigInteger li_1 = parts[0];
@@ -88,8 +104,8 @@ public class Main {
 			BigInteger l = BigInteger.valueOf(ri_1.longValue());
 			BigInteger r = fout.xor(li_1);
 
-			if (DEBUG) System.out.println("L: " + toBinaryString(l, 6));
-			if (DEBUG) System.out.println("R: " + toBinaryString(r, 6));
+			if (DEBUG) System.out.println("L: " + toBinaryString(l, partLen));
+			if (DEBUG) System.out.println("R: " + toBinaryString(r, partLen));
 
 			li_1 = l;
 			ri_1 = r;
@@ -105,13 +121,17 @@ public class Main {
 			}
 		}
 		
-		BigInteger result = ri_1.shiftLeft(6).add(li_1);
+		BigInteger result = ri_1.shiftLeft(partLen).add(li_1);
 		
 		return result;
 	}
 	
 	/**
-	 * This is f(Ri-1,Ki).
+	 * This is f(Ri-1,Ki).  
+	 * Take the right hand 6-bit nibble an expand to 8-bits.
+	 * XOR with the key.
+	 * Take each 4-bit nibble and reduce to 3-bits using the S boxes.
+	 * Combine to return a 6-bit value.
 	 * @param r the right side part.
 	 * @param k the key.
 	 * @return the output of f(Ri-1, Ki).
@@ -171,14 +191,20 @@ public class Main {
 		BigInteger result = BigInteger.ZERO;
 		
 		int t = i - 1;
-		int index = t % 9;
+		int index = t % keyLen;
 		
-		BigInteger[] parts = key.divideAndRemainder(BigInteger.valueOf(2).pow(9 - index));
+		BigInteger[] parts = key.divideAndRemainder(BigInteger.valueOf(2).pow(keyLen - index));
 		result = parts[1].shiftLeft(index).add(parts[0]).shiftRight(1);
 
 		return result;
 	}
 	
+	/**
+	 * This method returns a zero-padded, right-justified binary string of the input value.
+	 * @param value the value of interest.
+	 * @param nBits the number of bits in the string.
+	 * @return a zero-padded, right-justified binary string of the input value.
+	 */
 	private String toBinaryString(BigInteger value, int nBits) {
 		String temp = "000000000000" + value.toString(2);
 		return temp.substring(temp.length() - nBits);
